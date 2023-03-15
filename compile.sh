@@ -1,0 +1,1 @@
+g++ main.cpp fuelorder.cpp socket-server.cpp -o program; ./program
