@@ -5,73 +5,79 @@
 #include <unistd.h>
 #include <stdio.h>
 #include "fuelorder.h"
-#define PORT 6969
+#define PORT 6969          // Port number used for the connection
 
 
-namespace CPPSOCKET{
-    int server_fd, new_socket, valread;
-    struct sockaddr_in address;
-    int opt = 1; // option
-    int addrlen = sizeof(address);
-    char buffer[1024] = { 0x00 };
-    char* hello = "Message Recieved";
-    void interpertMessage(char* buffer, int size);
+// Namespace for encapsulating functions and variables related to sockets
+namespace CPPSOCKET {
+    int server_fd, new_socket, valread;      // File descriptors and variable for storing bytes read
+    struct sockaddr_in address;              // Structure for storing the address information
+    int opt = 1;                             // Option variable used for setting socket options
+    int addrlen = sizeof(address);           // Length of the address
+    char buffer[1024] = { 0x00 };            // Buffer for storing received data
+    char* hello = "Message Received";        // Message to be sent back to the client
 
-
-
-    bool startSocket(){
-        if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+    // Function for initializing the socket
+    bool startSocket() {
+        if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+            // If socket creation fails, display error message and return false
             perror("Socket Failed...");
             return false;
         }
-        // if (setsockopt(server_fd, SOL_SOCKET,
-        //            SO_REUSEADDR | SO_REUSEPORT, &opt,
-        //            sizeof(opt))) {
-        //     perror("setsockopt");
-        //     return false;
-        // }
+        
+        // Set the address family, IP address and port number for the connection
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = htons(INADDR_ANY);
         address.sin_port = htons(PORT);
+        
+        // Return true if socket initialization is successful
         return true;
     }
     
-    /*
-        Only Start when startSocket returns true...
-    */
-    bool startConnection(){
-            // Forcefully attaching socket to the port 6969
-        if (bind(server_fd, (struct sockaddr*)&address,
-                sizeof(address))
-            < 0) {
+    // Function for starting the connection
+    bool startConnection() {
+        // Bind the socket to the specified address and port
+        if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+            // If binding fails, display error message and return false
             perror("bind failed");
             return false;
         }
+        
+        // Listen for incoming connections
         if (listen(server_fd, 1) < 0) {
+            // If listening fails, display error message and return false
             perror("listen");
             return false;
         }
-        while(1){
-            bool isExit = true;
-            int new_socket = accept(server_fd, (struct sockaddr*)&address,
-                        (socklen_t*)&addrlen);
-            if(new_socket > 0){
+        
+        // Loop continuously to handle incoming connections
+        while (1) {
+            bool isExit = true; // Boolean flag to keep track of whether the connection has ended
+            // Accept a new connection
+            int new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+            if (new_socket > 0) {
                 isExit = false;
             }
 
-            while(new_socket > 0 && !isExit){
-                while(*buffer != 0x11){
+            // Receive data from the client and send a response back
+            while (new_socket > 0 && !isExit) {
+                while (*buffer != 0x11) {
+                    // Receive data from the client and store it in the buffer
                     int count = recv(new_socket, buffer, 1024, 0);
+                    // Send a response back to the client
                     int sendMSG = send(new_socket, hello, strlen(hello), 0);
-                    if(sendMSG == -1){
+                    if (sendMSG == -1) {
+                        // If sending fails, close the connection and exit the loop
                         close(new_socket);
                     }
-                    if(count == -1) {
+                    if (count == -1) {
+                        // If receiving fails, close the connection and exit the loop
                         close(new_socket);
                         isExit = true;
                         break;
                     }
-                    else if(count == 0) {
+                    else if (count == 0) {
+                        // If the client has closed the connection, close the connection and exit the loop
                         close(new_socket);
                         isExit = true;
                         continue;
